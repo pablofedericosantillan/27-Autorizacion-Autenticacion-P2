@@ -4,14 +4,22 @@ const http = require('http').Server(app);
 const io = require('socket.io')(http);
 const productos = require('./api/productos');
 
-app.use(express.urlencoded({extended: true}))
-app.use(express.json())
+app.use(express.urlencoded({extended: true}));
+app.use(express.json());
 
-const cookieParser = require('cookie-parser')
-const session = require('express-session')
+const cookieParser = require('cookie-parser');
+const session = require('express-session');
+
+const MongoStore = require('connect-mongo')
+const advancedOptions = { useNewUrlParser: true, useUnifiedTopology: true };
 
 app.use(cookieParser())
 app.use(session({
+    store: MongoStore.create({
+        mongoUrl: "mongodb+srv://pfsantillan:35783028@cluster0.kfxor.mongodb.net/ecommerce?retryWrites=true&w=majority",
+        mongoOptions: advancedOptions,
+        ttl: 10*60
+    }),
     secret: 'secret',
     resave: false,
     saveUninitialized: false,
