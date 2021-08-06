@@ -16,62 +16,6 @@ const baseDatosMensajes = require('./baseDatos/baseDatosMensajes');
 const productosRouter = require('./routes/productos');
 app.use('/api', productosRouter);
 
-/* ------------------- PASSPORT ---------------------------- */
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const bCrypt = require('./api/bCrypt');
-const User = require('./baseDatos/baseDatosUsers');
-
-passport.use('login', new LocalStrategy({
-  passReqToCallback: true
-},
-  async function (req, username, password, done) {
-    // Verificacion si en la BD existe el usuario
-    let u = await User.listar();
-    let usuario = u.find(u => u.username === username);
-    if (!usuario) {
-        return done(null, false, console.log('mensaje', 'usuario no encontrado'));
-    } else {
-        if (!bCrypt.isValidPassword(usuario, password)) {
-            console.log('contraseña invalida');
-            return done(null, false, console.log('mensaje', 'contraseña invalida'));
-        } else {
-            return done(null, usuario);
-        }
-    }
-})
-);
-
-
-passport.use('signup', new LocalStrategy({
-    passReqToCallback: true
-}, async function (req, username, password, done) {
-    // Verificacion si en la BD existe el usuario
-    let u = await User.listar();
-    let usuario = u.find(u => u.username === username);
-    if (usuario) {
-        console.log('usuario ya existe');
-        return done(null, false, console.log('mensaje', 'usuario ya existe'));
-    } else {
-        let newU = {
-            username: username,
-            password: bCrypt.createHash(password),
-        };
-        let newUser = await User.guardar(newU);
-
-        return done(null, newUser,console.log('Resgitro de Usuarios Exitoso!!!'));
-    }
-})
-);
-
-passport.serializeUser(function (user, done) {
-    done(null, user._id);
-  });
-  
-  passport.deserializeUser(async function (id, done) {
-    done(null, await User.buscarPorId(id));
-  });
-
 /* --------------- Configuración de handlebars -------------- */
 const handlebars = require('express-handlebars');
 app.engine(
@@ -107,23 +51,71 @@ app.use(session({
     saveUninitialized: false,
 }));
 
+/* ------------------- PASSPORT ---------------------------- */
+const passport = require('passport');
+//const LocalStrategy = require('passport-local').Strategy;
+const bCrypt = require('./api/bCrypt');
+const User = require('./baseDatos/baseDatosUsers');
+const FacebookStrategy = require('passport-facebook').Strategy;
+const dotenv = require('dotenv');
+
+dotenv.config();
+
+// completar con sus credenciales
+const FACEBOOK_CLIENT_ID = process.env.FACEBOOK_CLIENT_ID;
+const FACEBOOK_CLIENT_SECRET = process.env.FACEBOOK_CLIENT_SECRET;
+
+// configuramos passport para usar facebook
+passport.use(new FacebookStrategy({
+    clientID: FACEBOOK_CLIENT_ID,
+    clientSecret: FACEBOOK_CLIENT_SECRET,
+    callbackURL: '/auth/facebook/callback',
+    profileFields: ['id', 'displayName', 'photos', 'emails'],
+    scope: ['email']
+}, function (accessToken, refreshToken, profile, done) {
+    //console.log(profile);
+    let userProfile = profile;
+    return done(null, userProfile);
+}));
+
+  passport.serializeUser(function (user, done) {
+    done(null, user);
+});
+passport.deserializeUser(function (user, done) {
+    done(null, user);
+});
+
 //Inicializamos Passport 
 app.use(passport.initialize());
 app.use(passport.session());
+
 
 /* -----------------ENDPOINTS: LOGING, SIGNUP Y LOGOUT--------------------- */
 const function_passport = require('./api/function_passport');
 
 //-LOGIN
-app.post('/login', passport.authenticate('login', { failureRedirect: '/faillogin' }), function_passport.postLogin);
 app.get('/login', function_passport.getLogin);
-app.get('/faillogin', function_passport.getFaillogin);
-
-//-SIGNUP
-app.post('/signup', passport.authenticate('signup', { failureRedirect: '/failsignup' }), function_passport.postSignup);
-app.get('/signup', function_passport.getSignup);
-app.get('/signup-exitoso', function_passport.getSignupSucessfull);
-app.get('/failsignup', function_passport.getFailsignup);
+app.get('/auth/facebook', passport.authenticate('facebook'));
+app.get('/auth/facebook/callback', passport.authenticate('facebook',
+    {
+        successRedirect: '/datos',
+        failureRedirect: '/faillogin'
+    }
+));
+app.get('/datos', (req,res) => {
+    //console.log(req.user)
+    let { displayName, emails, photos} = req.user;
+    console.log('datos extraidos', displayName, emails[0].value, photos[0].value)
+    console.log('\n ---entre a datos----\n')
+        res.render("tablas", {
+            nombre: displayName,
+            email: emails[0].value,
+            foto: photos[0].value
+        })
+})
+app.get('/faillogin', (req, res) => {
+    res.status(401).send({ error: 'no se pudo autenticar con facebook' })
+});
 
 //  LOGOUT
 app.get('/logout', function_passport.getLogout);

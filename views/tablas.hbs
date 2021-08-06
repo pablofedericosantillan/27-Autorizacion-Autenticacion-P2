@@ -2,11 +2,21 @@
 <script src="/socket.io/socket.io.js"></script>
 
 <h1 class="alert alert-success">
-    Bienvenido {{nombre}}
-    <button class="btn btn-warning float-right mt-2" onclick="location.href='/logout'">
+    Bienvenido
+      <button class="btn btn-warning float-right mt-1" onclick="location.href='/logout'">
         Desloguear
     </button>
 </h1>
+ <h3 class="alert alert-success">
+        <br>
+                <tr>
+                    <td>Nombre: {{nombre}}</td>
+                     <br>
+                    <td>Email: {{ email }}</td>
+                    <td><img class="float-right" width="70" src={{foto}} alt="not found"></td>
+                </tr>
+        <br>
+</h3>
 
 <div class="jumbotron">
     <h1>Ingrese Producto</h1>

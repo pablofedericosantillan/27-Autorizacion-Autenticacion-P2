@@ -1,8 +1,8 @@
 //-LOGIN
-/*function postLogin (req, res) {
+function postLogin (req, res) {
   //var user = req.user;
   res.sendFile(process.cwd() + '/public/index.html');
-}*/
+}
 function postLogin (req, res) {
   let { username } = req.body
   req.session.username = username
@@ -53,7 +53,10 @@ function getSignupSucessfull (req, res) {
 
 //-LOGOUT
 function getLogout (req, res) {
-  let nombre = req.user.username;
+  //let nombre = req.user.username;
+  let { displayName} = req.user;
+  //console.log('sssssssssaaa', displayName)
+  let nombre = displayName//req.user.displayName
   req.logout();
   res.render("logout", {nombre})
 }
